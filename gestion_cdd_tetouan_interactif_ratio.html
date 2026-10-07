@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des CDD & Plan de Charge - McDonald's Tétouan Drive</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-red-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-burger text-3xl text-yellow-400"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">McDonald's Tétouan Drive</h1>
+                    <p class="text-xs text-red-200">Gestion des CDD & Rapprochement Plan vs Réel</p>
+                </div>
+            </div>
+            <div class="mt-3 md:mt-0 flex space-x-2">
+                <button onclick="switchTab('cdd')" id="btn-tab-cdd" class="px-4 py-2 bg-red-700 rounded-lg text-sm font-semibold transition hover:bg-red-800 active"><i class="fa-solid fa-users-rectangle mr-2"></i> Gestion CDD & Rapprochement</button>
+                <button onclick="switchTab('plan')" id="btn-tab-plan" class="px-4 py-2 bg-red-800/50 rounded-lg text-sm font-semibold transition hover:bg-red-800"><i class="fa-solid fa-chart-line mr-2"></i> Plan de Charge & Paramètres</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- ONGLET 1 : GESTION CDD & RAPPROCHEMENT PLAN VS RÉEL -->
+        <div id="tab-cdd" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Formulaire d'ajout / modification de CDD -->
+                <div class="bg-white p-6 rounded-xl shadow-md lg:col-span-1">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <i class="fa-solid fa-user-plus text-red-600 mr-2"></i> <span id="form-title">Nouveau Contrat CDD</span>
+                    </h2>
+                    <form id="cdd-form" onsubmit="saveCDD(event)" class="space-y-4">
+                        <input type="hidden" id="cdd-id">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 uppercase">Nom</label>
+                            <input type="text" id="nom" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 uppercase">Prénom</label>
+                            <input type="text" id="prenom" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 uppercase">Date de Signature</label>
+                            <input type="date" id="date_signature" required onchange="calculateEndDate()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 uppercase">Durée (en mois)</label>
+                            <input type="number" id="duree" min="1" max="36" value="6" required oninput="calculateEndDate()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 uppercase">Date de Fin (Calculée)</label>
+                            <input type="date" id="date_fin" readonly class="mt-1 block w-full rounded-md bg-gray-100 border-gray-300 shadow-sm border p-2 text-sm text-gray-600 cursor-not-allowed">
+                        </div>
+                        <div class="flex space-x-2 pt-2">
+                            <button type="submit" class="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 font-medium text-sm shadow">Enregistrer</button>
+                            <button type="button" onclick="resetForm()" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 font-medium text-sm">Annuler</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Liste des Contrats -->
+                <div class="bg-white p-6 rounded-xl shadow-md lg:col-span-2 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                            <i class="fa-solid fa-file-contract text-red-600 mr-2"></i> Liste des Contrats CDD Actifs
+                        </h2>
+                        <input type="text" id="search-cdd" placeholder="Rechercher..." oninput="renderCDDs()" class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+                    </div>
+                    <div class="overflow-x-auto flex-1">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase">Nom & Prénom</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase">Signature</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase">Durée</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase">Fin Contrat</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase">Statut</th>
+                                    <th class="px-4 py-3 text-right font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cdd-table-body" class="divide-y divide-gray-200 bg-white">
+                                <!-- Dynamique -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLEAU DE RAPPROCHEMENT PLAN vs RÉEL -->
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                    <div>
+                        <h3 class="text-md font-bold text-gray-900 flex items-center">
+                            <i class="fa-solid fa-scale-balanced text-red-600 mr-2"></i> Rapprochement Plan vs Réel (Effectifs Équipiers)
+                        </h3>
+                        <p class="text-xs text-gray-500">Comparaison entre le besoin requis par le plan de charge et l'effectif réel CDD en poste, avec ajustement des ratios de disponibilité.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs border">
+                        <thead class="bg-gray-800 text-white">
+                            <tr>
+                                <th class="px-3 py-3 text-left font-semibold">Indicateur / Mois</th>
+                                <th class="px-2 py-3 text-center">Jan</th>
+                                <th class="px-2 py-3 text-center">Fév</th>
+                                <th class="px-2 py-3 text-center">Mars</th>
+                                <th class="px-2 py-3 text-center">Avril</th>
+                                <th class="px-2 py-3 text-center">Mai</th>
+                                <th class="px-2 py-3 text-center">Juin</th>
+                                <th class="px-2 py-3 text-center">Juil</th>
+                                <th class="px-2 py-3 text-center">Août</th>
+                                <th class="px-2 py-3 text-center">Sept</th>
+                                <th class="px-2 py-3 text-center">Oct</th>
+                                <th class="px-2 py-3 text-center">Nov</th>
+                                <th class="px-2 py-3 text-center">Déc</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rapprochement-table-body" class="divide-y divide-gray-200 bg-white">
+                            <!-- Dynamique -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ONGLET 2 : PLAN DE CHARGE & PARAMÈTRES -->
+        <div id="tab-plan" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900"><i class="fa-solid fa-calculator text-red-600 mr-2"></i> Modèle de Calcul & Paramètres (Tétouan Drive)</h2>
+                        <p class="text-xs text-gray-500">Modifiez le CA prévisionnel ou les ratios de disponibilité pour impacter le plan de charge.</p>
+                    </div>
+                    <div class="mt-3 md:mt-0">
+                        <button onclick="resetDefaultData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-md border border-gray-300">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Réinitialiser données d'origine
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs border">
+                        <thead class="bg-red-700 text-white">
+                            <tr>
+                                <th class="px-3 py-3 text-left font-semibold w-64">Indicateur / Ligne</th>
+                                <th class="px-2 py-3 text-center font-semibold">Jan</th>
+                                <th class="px-2 py-3 text-center font-semibold">Fév</th>
+                                <th class="px-2 py-3 text-center font-semibold">Mars</th>
+                                <th class="px-2 py-3 text-center font-semibold">Avril</th>
+                                <th class="px-2 py-3 text-center font-semibold">Mai</th>
+                                <th class="px-2 py-3 text-center font-semibold">Juin</th>
+                                <th class="px-2 py-3 text-center font-semibold">Juil</th>
+                                <th class="px-2 py-3 text-center font-semibold">Août</th>
+                                <th class="px-2 py-3 text-center font-semibold">Sept</th>
+                                <th class="px-2 py-3 text-center font-semibold">Oct</th>
+                                <th class="px-2 py-3 text-center font-semibold">Nov</th>
+                                <th class="px-2 py-3 text-center font-semibold">Déc</th>
+                                <th class="px-2 py-3 text-center font-semibold bg-red-800">TOTAL / Moy</th>
+                            </tr>
+                        </thead>
+                        <tbody id="excel-table-body" class="divide-y divide-gray-200 bg-white">
+                            <!-- Généré par JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const defaultExcelData = {
+            ca: [2933, 2231.82, 3769, 3666.43, 3642.67, 5221, 11183, 14552, 4900.55, 3561.60, 3108.65, 3512.70],
+            heuresFixes: 1883.55,
+            tauxHoraire: [22.89, 21.60, 22.50, 21.84, 21.84, 22.05, 22.57, 22.89, 22.26, 21.84, 21.84, 21.84],
+            tauxRisque: [0.12, 0.12, 0.12, 0.12, 0.12, 0.14, 0.18, 0.20, 0.18, 0.15, 0.13, 0.13],
+            pctPleinTemps: [0.55, 0.65, 0.70, 0.70, 0.70, 0.70, 0.80, 0.80, 0.80, 0.70, 0.70, 0.70],
+            heuresContractuelles: [143.77, 152.00, 156.00, 156.00, 155.70, 156.00, 164.00, 164.00, 164.00, 156.00, 156.00, 156.00]
+        };
+
+        let currentExcelData = JSON.parse(JSON.stringify(defaultExcelData));
+        const moisNoms = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+        function switchTab(tab) {
+            if(tab === 'cdd') {
+                document.getElementById('tab-cdd').classList.remove('hidden');
+                document.getElementById('tab-plan').classList.add('hidden');
+                document.getElementById('btn-tab-cdd').className = "px-4 py-2 bg-red-700 rounded-lg text-sm font-semibold transition hover:bg-red-800";
+                document.getElementById('btn-tab-plan').className = "px-4 py-2 bg-red-800/50 rounded-lg text-sm font-semibold transition hover:bg-red-800";
+                renderRapprochement();
+            } else {
+                document.getElementById('tab-cdd').classList.add('hidden');
+                document.getElementById('tab-plan').classList.remove('hidden');
+                document.getElementById('btn-tab-cdd').className = "px-4 py-2 bg-red-800/50 rounded-lg text-sm font-semibold transition hover:bg-red-800";
+                document.getElementById('btn-tab-plan').className = "px-4 py-2 bg-red-700 rounded-lg text-sm font-semibold transition hover:bg-red-800";
+                renderExcelTable();
+            }
+        }
+
+        let cdds = JSON.parse(localStorage.getItem('tetouan_cdds')) || [
+            { id: 1, nom: "Lehlou", prenom: "Adil", date_signature: "2026-01-01", duree: 12, date_fin: "2026-12-31" },
+            { id: 2, nom: "Ouchen", prenom: "Randa", date_signature: "2026-03-01", duree: 6, date_fin: "2026-09-01" },
+            { id: 3, nom: "Talidi", prenom: "Marwa", date_signature: "2026-06-01", duree: 6, date_fin: "2026-12-01" }
+        ];
+
+        function calculateEndDate() {
+            const sig = document.getElementById('date_signature').value;
+            const dur = parseInt(document.getElementById('duree').value);
+            if(sig && dur) {
+                let d = new Date(sig);
+                d.setMonth(d.getMonth() + dur);
+                document.getElementById('date_fin').value = d.toISOString().split('T')[0];
+            }
+        }
+
+        function saveCDD(e) {
+            e.preventDefault();
+            const id = document.getElementById('cdd-id').value;
+            const nom = document.getElementById('nom').value;
+            const prenom = document.getElementById('prenom').value;
+            const date_signature = document.getElementById('date_signature').value;
+            const duree = parseInt(document.getElementById('duree').value);
+            const date_fin = document.getElementById('date_fin').value;
+
+            if(id) {
+                const idx = cdds.findIndex(c => c.id == id);
+                if(idx !== -1) cdds[idx] = { id: Number(id), nom, prenom, date_signature, duree, date_fin };
+            } else {
+                const newId = cdds.length > 0 ? Math.max(...cdds.map(c => c.id)) + 1 : 1;
+                cdds.push({ id: newId, nom, prenom, date_signature, duree, date_fin });
+            }
+
+            localStorage.setItem('tetouan_cdds', JSON.stringify(cdds));
+            resetForm();
+            renderCDDs();
+            renderRapprochement();
+        }
+
+        function resetForm() {
+            document.getElementById('cdd-form').reset();
+            document.getElementById('cdd-id').value = '';
+            document.getElementById('form-title').innerText = "Nouveau Contrat CDD";
+            document.getElementById('date_signature').value = new Date().toISOString().split('T')[0];
+            calculateEndDate();
+        }
+
+        function editCDD(id) {
+            const c = cdds.find(item => item.id === id);
+            if(c) {
+                document.getElementById('cdd-id').value = c.id;
+                document.getElementById('nom').value = c.nom;
+                document.getElementById('prenom').value = c.prenom;
+                document.getElementById('date_signature').value = c.date_signature;
+                document.getElementById('duree').value = c.duree;
+                document.getElementById('date_fin').value = c.date_fin;
+                document.getElementById('form-title').innerText = "Modifier Contrat CDD";
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            }
+        }
+
+        function deleteCDD(id) {
+            if(confirm("Voulez-vous vraiment supprimer ce contrat ?")) {
+                cdds = cdds.filter(c => c.id !== id);
+                localStorage.setItem('tetouan_cdds', JSON.stringify(cdds));
+                renderCDDs();
+                renderRapprochement();
+            }
+        }
+
+        function renderCDDs() {
+            const search = document.getElementById('search-cdd').value.toLowerCase();
+            const tbody = document.getElementById('cdd-table-body');
+            tbody.innerHTML = '';
+
+            const filtered = cdds.filter(c => c.nom.toLowerCase().includes(search) || c.prenom.toLowerCase().includes(search));
+            
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">Aucun contrat trouvé.</td></tr>`;
+                return;
+            }
+
+            const today = new Date();
+
+            filtered.forEach(c => {
+                const fin = new Date(c.date_fin);
+                const isActive = fin >= today;
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-900">${c.nom} ${c.prenom}</td>
+                        <td class="px-4 py-3 text-gray-600">${c.date_signature}</td>
+                        <td class="px-4 py-3 text-gray-600">${c.duree} mois</td>
+                        <td class="px-4 py-3 text-gray-600">${c.date_fin}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${isActive ? 'Actif' : 'Expiré'}</span></td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                            <button onclick="editCDD(${c.id})" class="text-blue-600 hover:text-blue-900"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteCDD(${c.id})" class="text-red-600 hover:text-red-900"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateAvailabilityRatio(monthIdx, value) {
+            let val = parseFloat(value);
+            if(isNaN(val)) val = 0;
+            if(val < 0) val = 0;
+            if(val > 1) val = 1;
+            currentExcelData.pctPleinTemps[monthIdx] = val;
+            renderRapprochement();
+        }
+
+        function getCalculatedPlanBesoins() {
+            const d = currentExcelData;
+            let heuresVar = d.ca.map(ca => ca * 550 / 303.02);
+            let heuresTotales = heuresVar.map(hv => hv + d.heuresFixes);
+            let risques = heuresTotales.map((ht, i) => ht * d.tauxRisque[i]);
+            let totalBesoins = heuresTotales.map((ht, i) => ht + risques[i]);
+            let besoinEquipiers = totalBesoins.map((tb, i) => d.heuresContractuelles[i] > 0 ? tb / d.heuresContractuelles[i] : 0);
+            return besoinEquipiers;
+        }
+
+        function renderRapprochement() {
+            const tbody = document.getElementById('rapprochement-table-body');
+            tbody.innerHTML = '';
+
+            const planBesoins = getCalculatedPlanBesoins();
+
+            let effectifReel = [];
+            for(let m = 0; m < 12; m++) {
+                const monthStart = new Date(2026, m, 1);
+                const monthEnd = new Date(2026, m + 1, 0);
+
+                let count = cdds.filter(c => {
+                    const sig = new Date(c.date_signature);
+                    const fin = new Date(c.date_fin);
+                    return sig <= monthEnd && fin >= monthStart;
+                }).length;
+                effectifReel.push(count);
+            }
+
+            let ecart = planBesoins.map((plan, i) => effectifReel[i] - plan);
+
+            let trPlan = `<tr class="bg-gray-50 font-semibold">
+                <td class="px-3 py-2 border-r text-gray-800">1. Besoin Plan (Équipiers)</td>`;
+            planBesoins.forEach(val => {
+                trPlan += `<td class="px-2 py-2 border-r text-center">${val.toFixed(1)}</td>`;
+            });
+            trPlan += `</tr>`;
+
+            let trRatio = `<tr class="bg-blue-50/50">
+                <td class="px-3 py-2 border-r text-blue-900 font-medium">2. Ratio de Disponibilité (% Plein Temps - Saisissable)</td>`;
+            currentExcelData.pctPleinTemps.forEach((val, i) => {
+                trRatio += `<td class="px-2 py-2 border-r text-center"><input type="number" step="0.01" min="0" max="1" value="${val}" onchange="updateAvailabilityRatio(${i}, this.value)" class="w-16 text-center border rounded p-1 text-xs focus:ring-1 focus:ring-blue-500"></td>`;
+            });
+            trRatio += `</tr>`;
+
+            let trReel = `<tr class="font-semibold">
+                <td class="px-3 py-2 border-r text-gray-800">3. Effectif Réel (CDD Actifs)</td>`;
+            effectifReel.forEach(val => {
+                trReel += `<td class="px-2 py-2 border-r text-center text-red-600 text-sm">${val}</td>`;
+            });
+            trReel += `</tr>`;
+
+            let trEcart = `<tr class="bg-gray-100 font-bold">
+                <td class="px-3 py-2 border-r text-gray-800">4. Écart (Réel vs Plan)</td>`;
+            ecart.forEach(val => {
+                let color = val >= 0 ? "text-green-600" : "text-red-600";
+                let sign = val > 0 ? "+" : "";
+                trEcart += `<td class="px-2 py-2 border-r text-center ${color}">${sign}${val.toFixed(1)}</td>`;
+            });
+            trEcart += `</tr>`;
+
+            tbody.innerHTML = trPlan + trRatio + trReel + trEcart;
+        }
+
+        function updateCA(monthIdx, value) {
+            currentExcelData.ca[monthIdx] = parseFloat(value) || 0;
+            renderExcelTable();
+        }
+
+        function updateAvailabilityRatioFromPlan(monthIdx, value) {
+            let val = parseFloat(value);
+            if(isNaN(val)) val = 0;
+            if(val < 0) val = 0;
+            if(val > 1) val = 1;
+            currentExcelData.pctPleinTemps[monthIdx] = val;
+            renderExcelTable();
+        }
+
+        function renderExcelTable() {
+            const tbody = document.getElementById('excel-table-body');
+            tbody.innerHTML = '';
+
+            const d = currentExcelData;
+            
+            let heuresVar = d.ca.map(ca => ca * 550 / 303.02);
+            let heuresTotales = heuresVar.map(hv => hv + d.heuresFixes);
+            let masseSalariale = heuresTotales.map((ht, i) => ht * d.tauxHoraire[i] / 1000);
+            let pctMO = masseSalariale.map((ms, i) => d.ca[i] > 0 ? (ms / d.ca[i]) : 0);
+            let risques = heuresTotales.map((ht, i) => ht * d.tauxRisque[i]);
+            let totalBesoins = heuresTotales.map((ht, i) => ht + risques[i]);
+            let rmi = totalBesoins.map((tb, i) => tb * d.pctPleinTemps[i]);
+            let besoinEquipiers = totalBesoins.map((tb, i) => d.heuresContractuelles[i] > 0 ? tb / d.heuresContractuelles[i] : 0);
+
+            let rows = [
+                { title: "CA prévisionnel en k€ (Saisissable)", type: "input", data: d.ca, field: 'ca' },
+                { title: "Nbre d'heures variables", type: "calc", data: heuresVar, format: '1' },
+                { title: "Nbre d'heures fixes", type: "fixed", data: Array(12).fill(d.heuresFixes), format: '2' },
+                { title: "Nbre d'heures totales nécessaires", type: "calc", bold: true, data: heuresTotales, format: '1' },
+                { title: "Coût horaire moyen chargé (€)", type: "readonly", data: d.tauxHoraire, format: '2' },
+                { title: "Masse Salariale en K€", type: "calc", data: masseSalariale, format: '2' },
+                { title: "% main d'œuvre mensuelle", type: "calc", data: pctMO, format: '%' },
+                { title: "% taux de risque mensuel", type: "readonly", data: d.tauxRisque, format: '%' },
+                { title: "Besoins liés aux risques (heures)", type: "calc", data: risques, format: '1' },
+                { title: "% Crew Plein Temps (Dispo - Saisissable)", type: "input_ratio", data: d.pctPleinTemps, format: '%' },
+                { title: "TOTAL DES BESOINS (Heures)", type: "calc", bold: true, bg: "bg-red-50", data: totalBesoins, format: '1' },
+                { title: "Nbre d'heures contractuelles moy.", type: "readonly", data: d.heuresContractuelles, format: '1' },
+                { title: "RMI (Heures)", type: "calc", data: rmi, format: '1' },
+                { title: "Besoin Effectifs (Équipiers)", type: "calc", bold: true, bg: "bg-yellow-50", data: besoinEquipiers, format: '1' }
+            ];
+
+            rows.forEach((r, rIdx) => {
+                let tr = document.createElement('tr');
+                if(r.bold) tr.className += " font-bold " + (r.bg || "bg-gray-50");
+
+                let tdTitle = document.createElement('td');
+                tdTitle.className = "px-3 py-2 border-r text-gray-800 font-medium";
+                tdTitle.innerText = r.title;
+                tr.appendChild(tdTitle);
+
+                let sumOrAvg = 0;
+                r.data.forEach((val, mIdx) => {
+                    let td = document.createElement('td');
+                    td.className = "px-2 py-2 border-r text-center";
+                    
+                    if(r.type === 'input') {
+                        td.innerHTML = `<input type="number" step="0.01" value="${val}" onchange="updateCA(${mIdx}, this.value)" class="w-20 text-center border rounded p-1 text-xs focus:ring-1 focus:ring-red-500">`;
+                    } else if(r.type === 'input_ratio') {
+                        td.innerHTML = `<input type="number" step="0.01" min="0" max="1" value="${val}" onchange="updateAvailabilityRatioFromPlan(${mIdx}, this.value)" class="w-16 text-center border rounded p-1 text-xs focus:ring-1 focus:ring-blue-500">`;
+                    } else {
+                        if(r.format === '%') {
+                            td.innerText = (val * 100).toFixed(1) + '%';
+                        } else if(r.format === '2') {
+                            td.innerText = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        } else {
+                            td.innerText = val.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                        }
+                    }
+                    tr.appendChild(td);
+                    sumOrAvg += val;
+                });
+
+                let tdTotal = document.createElement('td');
+                tdTotal.className = "px-2 py-2 text-center font-bold bg-gray-100";
+                if(r.type === 'input' || r.type === 'input_ratio' || r.title.includes('TOTAL') || r.title.includes('Masse')) {
+                    if(r.type === 'input_ratio') {
+                        tdTotal.innerText = (sumOrAvg / 12 * 100).toFixed(1) + '% (moy)';
+                    } else {
+                        tdTotal.innerText = sumOrAvg.toLocaleString('fr-FR', {maximumFractionDigits: 2});
+                    }
+                } else {
+                    let avg = sumOrAvg / 12;
+                    tdTotal.innerText = avg.toLocaleString('fr-FR', {maximumFractionDigits: 2});
+                }
+                tr.appendChild(tdTotal);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function resetDefaultData() {
+            currentExcelData = JSON.parse(JSON.stringify(defaultExcelData));
+            renderExcelTable();
+            renderRapprochement();
+        }
+
+        window.onload = function() {
+            document.getElementById('date_signature').value = new Date().toISOString().split('T')[0];
+            calculateEndDate();
+            renderCDDs();
+            renderRapprochement();
+        };
+    </script>
+</body>
+</html>
